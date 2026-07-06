@@ -96,7 +96,7 @@ Any ESP32-C3 with USB Serial/JTAG:
 ## Roadmap
 
 - [ ] GPIO interrupt-driven hash on pin change
-- [ ] Dual-C3 fabric (power rail voltage sag as inter-chip signaling)
+
 - [ ] I2C / SPI driver in under 100 bytes
 - [ ] UART bitbang at 1 Mbps
 - [ ] ADC read + fingerprint stream
