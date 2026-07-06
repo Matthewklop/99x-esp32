@@ -8,7 +8,7 @@ We removed them.
 
 ---
 
-## For Non-Coders: What This Actually Means
+## What This Actually Means
 
 | You know how… | We fixed it |
 |---|---|
