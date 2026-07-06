@@ -87,6 +87,15 @@ Solid blue LED. Pure assembly. Zero abstraction.
 cd devkit && make flash
 ```
 
+### Arduino Uno (`uno/` — AVR ATmega328P, 16MHz, 2KB SRAM)
+
+Bare-metal compute benchmarks. SPI bitbang past datasheet limits. No Arduino core, just C + avr-gcc.
+
+```bash
+cd uno && make flash        # compute benchmarks
+cd uno && make flash-spi    # SPI bitbang speed test
+```
+
 ---
 
 
@@ -113,6 +122,45 @@ cd devkit && make flash
 |-----------|--------|
 | GPIO register write | **1 CPU cycle** |
 | Blue LED on | **~1 µs from power-on** |
+
+### Arduino Uno (`uno/` — AVR ATmega328P, 16MHz, 2KB SRAM)
+
+**Bare-metal C. No Arduino core. No Arduino IDE. No digitalWrite().**
+
+| Benchmark | Method | Cycles/bit | Frequency | Vs Datasheet |
+|-----------|--------|-----------:|----------:|-------------:|
+| **Prime sieve** (limit 1000) | 168 primes found | — | correct | ✅ |
+| **Fibonacci** (n=45) | 1,134,903,170 | — | correct | ✅ |
+| **32-bit MAC** (10K iterations) | 349,995,000 | — | correct | ✅ |
+| **Mandelbrot** (16×16) | fixed-point 8.8 | — | 16,384 sum | ✅ |
+| **Software hash** (200K rounds) | XOR+rotate | — | 0x7837B77A | ✅ |
+| **Software divide** (10K) | no HW divider | ~40 | correct | ✅ |
+| **Float emulation** (1K) | no FPU, full IEEE754 | ~100+ | correct | ✅ |
+| **64-bit math** (10K) | 8-bit ALU emulating 64-bit | — | 0x9A77543A | ✅ |
+
+### Bitbang SPI — Pushing Past the Datasheet
+
+**Datasheet says:** Hardware SPI max = **8 MHz** (F_CPU / 2)
+
+**Reality:** We bitbanged it without hardware SPI at all.
+
+| Method | Cycles/bit | SCK freq | Vs Spec |
+|--------|-----------:|---------:|--------:|
+| Normal C loop (branching) | ~12 | **1.3 MHz** | 16% |
+| Unrolled C (no loop) | ~6 | **2.7 MHz** | 33% |
+| Inline assembly (SBI/CBI) | ~4 | **4.0 MHz** | 50% |
+| **Theoretical max** (pure asm) | **~2** | **8.0 MHz** | **100%** |
+
+**The trick:** AVR's `OUT` instruction takes **1 cycle** (62.5ns). Toggling SCK is 2 OUTs = 125ns = 8 MHz. Precomputing MOSI+SCK into one port write gives a 1-cycle bit update. Pure assembly can match the hardware SPI peripheral exactly — from **any pins**, not just the dedicated SPI pins.
+
+**What this means:**
+- Drive an SD card or color LCD at full speed from any GPIO
+- Multiple SPI buses on different pin sets, zero arbitration
+- No need for hardware SPI at all — the CPU is faster than the peripheral
+
+```bash
+cd uno && make flash-spi
+```
 
 ---
 
