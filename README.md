@@ -24,12 +24,12 @@ If your LED blinks once per second with Arduino, our firmware could blink it **1
 
 ---
 
-## The Numbers (orange = impressive)
+## The Numbers
 
 | | **99x-esp32** | Arduino | ESP-IDF |
 |---|---|---|---|
 | **Firmware size** | **<span style="color:#FF8C00">288 or 160 bytes</span>** | 15,000 bytes | 50,000 bytes |
-| **Boot time** | **<span style="color:#FF8C00">1 microsecond</span>** | 1 second | 0.5 seconds |
+| **Boot time** | **<span style="color:#FF8C00">0.000001 Seconds</span>** | 1 second | 0.5 seconds |
 | **Data speed** | **<span style="color:#FF8C00">55 MB/s</span>** | — | — |
 | **Time before reset** | **<span style="color:#FF8C00">forever</span>** | framework handles it | needs FreeRTOS |
 | **Things to install** | **<span style="color:#FF8C00">0 (zero)</span>** | 47 packages | 100+ |
@@ -72,20 +72,6 @@ cd devkit && make flash
 
 ---
 
-## The Secret
-
-The ESP32-C3 has a watchdog that resets the chip 325 milliseconds after boot. Everyone else uses an operating system to feed it. We feed it directly — four register writes, every loop iteration:
-
-```c
-*(volatile unsigned int *)0x6001F064 = 0x50D83AA1;
-*(volatile unsigned int *)0x6001F060 = 1;
-*(volatile unsigned int *)0x600080A4 = 0x50D83AA1;
-*(volatile unsigned int *)0x600080A0 = 1;
-```
-
-That's it. No FreeRTOS. No scheduler. No HAL. Four writes.
-
----
 
 ## Benchmark Details
 
