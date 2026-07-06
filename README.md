@@ -16,7 +16,7 @@ We removed them.
 | Your LED project is 15,000 bytes | **Ours is 160 bytes** |
 | Your chip resets after a few seconds | **Ours runs forever** |
 | You need to install 47 libraries | **We use zero** |
-| The bootloader takes 1 second to start | **We start in 1 microsecond** |
+| The bootloader takes 1 second to start | **We start in 0.000001 seconds ** |
 
 **1 microsecond is 1,000,000× faster than 1 second.**
 
