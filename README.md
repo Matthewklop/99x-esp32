@@ -103,14 +103,6 @@ Any ESP32-C3 with USB Serial/JTAG:
 
 ---
 
-## Related
-
-- [aiLocker](https://github.com/Matthewklop/ailocker) — the research project this grew out of
-- [ESP32-C3 TRM](https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf)
-- [fastAsFuck](https://github.com/Matthewklop/fastasfuck) — route discovery for optimal computation
-
----
-
 ## License
 
 MIT
