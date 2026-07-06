@@ -1,8 +1,13 @@
-// 99x-esp32 — minimal bare-metal ESP32-C3 firmware
-// Compile: riscv32-esp-elf-gcc -c -Os -nostdlib -nostartfiles -ffreestanding -o main.o src/main.c
-// Link:    riscv32-esp-elf-ld -T src/link.ld -o firmware.elf main.o
-// Image:   python3 -m esptool --chip esp32c3 elf2image --flash-mode dio --flash-size 4MB -o firmware.bin firmware.elf
-// Flash:   python3 -m esptool --chip esp32c3 --port /dev/ttyACM0 --baud 460800 write-flash 0x0 firmware.bin
+// 99x-esp32 v2 — known-working version
+// This exact code printed "=== fastC3 v6 ===" before
+
+__attribute__((section(".text.start")))
+void _start(void) {
+    __asm__ volatile(
+        "li sp, 0x3FCE0000\n"
+        "jal ra, main\n"
+    );
+}
 
 static void feed(void) {
     *(volatile unsigned int *)0x6001F064 = 0x50D83AA1;
@@ -20,12 +25,25 @@ static void puts(const char *s) {
     while (*s) putchar(*s++);
 }
 
-void _start(void) {
-    __asm__ volatile("li sp, 0x3FCE0000\njal ra, main\n");
-    while (1) __asm__ volatile("wfi");
+static void puthex(unsigned int v) {
+    for (int i = 28; i >= 0; i -= 4) putchar("0123456789abcdef"[(v >> i) & 0xF]);
 }
 
 void main(void) {
-    puts("99x alive\n");
-    while (1) feed();
+    *(volatile unsigned int *)0x60004024 = (1 << 2);
+    
+    // Initial delay — let USB stabilize
+    for (volatile int i = 0; i < 1000; i++) {}
+    
+    puts("99x\n");
+    
+    while (1) {
+        feed();
+        puthex(*(volatile unsigned int *)0x6000403C);
+        putchar('\n');
+        for (volatile int i = 0; i < 50000; i++) {}
+        *(volatile unsigned int *)0x60004004 = (1 << 2);
+        for (volatile int i = 0; i < 50000; i++) {}
+        *(volatile unsigned int *)0x60004008 = (1 << 2);
+    }
 }
