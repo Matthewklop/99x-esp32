@@ -37,6 +37,7 @@ If your LED blinks once per second with Arduino, our firmware could blink it **1
 | **Hash throughput** | **55,000,000 B/s** | — | — |
 | **Pin toggle (C3)** | **40,000,000 Hz** | — | — |
 | **Pin toggle (DevKit)** | **80,000,000 Hz** | — | — |
+| **Pin toggle (Uno)** | **8,000,000 Hz** | 2,670,000 Hz | — |
 | **ADC samples** | **1,600,000 / s** | 10,000 / s | 100,000 / s |
 | **WDT survival** | **infinite** | framework | FreeRTOS |
 | **Dependencies** | **0** | 47 | 100+ |
@@ -56,11 +57,11 @@ ESP-IDF minimum:  ████████████████████�
 |--------|------------------:|---------------:|------------------:|
 | Architecture | RISC-V 32-bit | Xtensa LX6 | AVR ATmega328P |
 | Clock | 160 MHz | 240 MHz | 16 MHz |
-| **Firmware** | **288 B** | **160 B** | **200 B** |
+| **Firmware** | **288 B** | **160 B** | **~2 KB** |
 | **Boot** | **0.000001 s** | **0.000001 s** | **0.000001 s** |
-| **Pin toggle** | **40,000,000 Hz** | **80,000,000 Hz** | **2,670,000 Hz** |
+| **Pin toggle** | **40,000,000 Hz** | **80,000,000 Hz** | **8,000,000 Hz** |
 | **Hash** | **55,000,000 B/s** | --- | --- |
-| **ADC** | **1,600,000 /s** | --- | --- |
+| **ADC** | **1,600,000 /s** | --- | **9,600 /s** |
 | **Deps** | **0** | **0** | **0** |
 | Price | $2 | $5 | $3 |
 
