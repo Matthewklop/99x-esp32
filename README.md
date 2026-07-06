@@ -8,36 +8,7 @@ We removed them.
 
 ---
 
-<!-- BENCHMARK COMPARISON -->
 
-```
-╔════════════════════════════════════════════════════════════╤══════════════╤══════════════╤═══════╗
-║                                                            │              │              │       ║
-║                     ╔═══╗           ╔═══╗          ╔═══╗   │    ESP32-C3   │   ESP32      │ Uno   ║
-║                     ║ C ║           ║ X ║          ║ A ║   │   (RISC-V)    │  (Xtensa)    │ (AVR) ║
-║                     ║ 3 ║           ║ T ║          ║ V ║   │   160 MHz     │  240 MHz     │16 MHz ║
-║                     ╚═══╝           ╚═══╝          ╚═══╝   │              │              │       ║
-║                    ┌─────┐         ┌─────┐        ┌─────┐  │              │              │       ║
-║                    │RISC │         │XTEN │        │ AVR │  │              │              │       ║
-║                    │ -V  │         │ -SA │        │     │  │              │              │       ║
-║                    └─────┘         └─────┘        └─────┘  │              │              │       ║
-║                     ╔═══╗           ╔═══╗          ╔═══╗   │              │              │       ║
-║                     ║ $2 ║           ║ $5 ║          ║ $3 ║   │              │              │       ║
-║                     ╚═══╝           ╚═══╝          ╚═══╝   │              │              │       ║
-╠════════════════════════════════════════════════════════════╪══════════════╪══════════════╪═══════╣
-║  📦  FIRMWARE                         ████████████████░░░░  │    288 B     │    160 B     │200 B  ║
-║  ⏱   BOOT TIME                         ██░░░░░░░░░░░░░░░░  │  0.000001 s  │  0.000001 s  │1 μs   ║
-║  🔄  PIN TOGGLE                                             │              │              │       ║
-║      C3    ████████████████████████████████████████░░░░░░░░  │ 40,000,000 Hz│              │       ║
-║      DevKit████████████████████████████████████████████████  │              │ 80,000,000 Hz│       ║
-║      Uno   ██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │              │              │2.67 M │
-║  🔐  HASH THROUGHPUT                  ████████████████████  │ 55,000,000   │     ---      │ ---   ║
-║  📊  ADC SAMPLES                       ████████████████████  │  1,600,000   │     ---      │ ---   ║
-║  📦  DEPENDENCIES                     ░░░░░░░░░░░░░░░░░░░░  │      0       │      0       │  0    ║
-╚════════════════════════════════════════════════════════════╧══════════════╧══════════════╧═══════╝
-```
-
----
 
 
 ## What This Actually Means
@@ -60,25 +31,38 @@ If your LED blinks once per second with Arduino, our firmware could blink it **1
 
 | | **99x-esp32** | Arduino | ESP-IDF |
 |---|---|---|---|
-| **Firmware size** | **<span style="color:#FF8C00">288 or 160 bytes</span>** | 15,000 bytes | 50,000 bytes |
-| **Boot time** | **<span style="color:#FF8C00">0.000001 Seconds</span>** | 1 second | 0.5 seconds |
-| **Data speed** | **<span style="color:#FF8C00">55 MB/s</span>** | — | — |
-| **Time before reset** | **<span style="color:#FF8C00">forever</span>** | framework handles it | needs FreeRTOS |
-| **Things to install** | **<span style="color:#FF8C00">0 (zero)</span>** | 47 packages | 100+ |
+| **Firmware (C3)** | **288 B** | 15,000 B | 50,000 B |
+| **Firmware (DevKit)** | **160 B** | 15,000 B | 50,000 B |
+| **Boot time** | **0.000001 s** | 1 s | 0.5 s |
+| **Hash throughput** | **55,000,000 B/s** | — | — |
+| **Pin toggle (C3)** | **40,000,000 Hz** | — | — |
+| **Pin toggle (DevKit)** | **80,000,000 Hz** | — | — |
+| **ADC samples** | **1,600,000 / s** | 10,000 / s | 100,000 / s |
+| **WDT survival** | **infinite** | framework | FreeRTOS |
+| **Dependencies** | **0** | 47 | 100+ |
 
 ### Visual size comparison
 
 ```
-Arduino empty sketch:
-████████████████████ 15,000 bytes
-
-ESP-IDF minimum:
-██████████████████████████████████████████████████ 50,000 bytes
-
-99x-esp32:
-█ 288 bytes (C3)
-▏ 160 bytes (DevKit)
+Arduino empty:    ████████████████████ 15,000 B
+ESP-IDF minimum:  ██████████████████████████████████████████████████ 50,000 B
+99x-esp32 C3:     ▏ 288 B
+99x-esp32 DevKit: ▏ 160 B
 ```
+
+### Cross-repo comparison
+
+| Metric | ESP32-C3 (RISC-V) | ESP32 (Xtensa) | Arduino Uno (AVR) |
+|--------|------------------:|---------------:|------------------:|
+| Architecture | RISC-V 32-bit | Xtensa LX6 | AVR ATmega328P |
+| Clock | 160 MHz | 240 MHz | 16 MHz |
+| **Firmware** | **288 B** | **160 B** | **200 B** |
+| **Boot** | **0.000001 s** | **0.000001 s** | **0.000001 s** |
+| **Pin toggle** | **40,000,000 Hz** | **80,000,000 Hz** | **2,670,000 Hz** |
+| **Hash** | **55,000,000 B/s** | --- | --- |
+| **ADC** | **1,600,000 /s** | --- | --- |
+| **Deps** | **0** | **0** | **0** |
+| Price | $2 | $5 | $3 |
 
 ---
 
