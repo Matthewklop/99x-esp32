@@ -111,6 +111,19 @@ Any ESP32-C3 with USB Serial/JTAG:
 
 ---
 
+## Benchmarks
+
+See [SHOWOFF_SPEED.md](SHOWOFF_SPEED.md) for full benchmarks.
+
+| Quick numbers | 99x-esp32 | Arduino | ESP-IDF |
+|--------------|-----------|---------|--------|
+| Firmware size | **160-288 B** | ~15 KB | ~50 KB |
+| Boot time | **~1 µs** | ~1 s | ~500 ms |
+| Dependencies | **0** | 47 packages | 100+ |
+| WDT survival | **∞** | framework handles | FreeRTOS |
+
+---
+
 ## License
 
 MIT

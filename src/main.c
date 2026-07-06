@@ -1,6 +1,6 @@
-// 99x-esp32 — bare-metal ESP32-C3 firmware
-// Reads ADC (GPIO2/A0) + GPIO state, streams over USB serial
-// Build: make && make flash
+// 99x-esp32 — safe mode template
+// Hold GPIO0 LOW at boot → safe mode (no risky hw init)
+// GPIO0 HIGH at boot → normal mode (full init)
 
 __attribute__((section(".text.start")))
 void _start(void) {
@@ -10,7 +10,27 @@ void _start(void) {
     );
 }
 
+// ─── Safe register write — blocks writes to protected regions ───
+// Protected: DPORT clock control, RTC control, eFuse
+#define PROTECTED_START 0x60026000
+#define PROTECTED_END   0x60027000
+#define RTC_START       0x60008000
+#define RTC_END         0x60009000
+
+static int safe_write(unsigned int addr, unsigned int val) {
+    // Never write to protected clock/reset regions
+    if (addr >= PROTECTED_START && addr < PROTECTED_END) return -1;
+    // RTC WDT feed is OK, but block other RTC writes
+    if (addr >= RTC_START && addr < RTC_END) {
+        // Only allow WDT feed/write register
+        if (addr != 0x600080A0 && addr != 0x600080A4) return -1;
+    }
+    *(volatile unsigned int *)addr = val;
+    return 0;
+}
+
 static void feed(void) {
+    // These are always safe
     *(volatile unsigned int *)0x6001F064 = 0x50D83AA1;
     *(volatile unsigned int *)0x6001F060 = 1;
     *(volatile unsigned int *)0x600080A4 = 0x50D83AA1;
@@ -30,78 +50,85 @@ static void puthex(unsigned int v) {
     for (int i = 28; i >= 0; i -= 4) putchar("0123456789abcdef"[(v >> i) & 0xF]);
 }
 
-static void putdec(unsigned int v) {
-    char b[12]; int n = 11; b[11] = 0;
-    if (v == 0) { putchar('0'); return; }
-    while (v) { b[--n] = '0' + (v % 10); v /= 10; }
-    puts(&b[n]);
+// ─── Hardware probe — check if it's safe to init risky peripherals ───
+// Returns 1 if USB Serial TX works, 0 if not
+static int probe_usb(void) {
+    unsigned int *conf = (unsigned int *)0x60043004;
+    // Try to send a char without waiting
+    *(volatile unsigned int *)0x60043000 = '?';
+    // Check if TX-ready bit changes (means USB is alive)
+    for (int i = 0; i < 1000; i++) {
+        if (*conf & 2) return 1;  // TX ready = USB alive
+    }
+    return 0;
 }
 
-// Init ADC1 on ESP32-C3
-// SAR ADC at 0x60040000
-// Need to: enable RTC clock, configure ADC, then read
-static void adc_init(void) {
-    // Enable ADC digital controller
-    // RTC_CNTL: enable SAR ADC1 clock
-    *(volatile unsigned int *)0x60008000 |= (1 << 24);  // Force power on
+// ─── Risky init wrapper ───
+// Only runs if safe conditions are met
+static int try_init_wifi(void) {
+    if (!probe_usb()) {
+        puts("USB dead, skipping WiFi init\n");
+        return -1;
+    }
     
-    // SAR ADC controller REGI = 0x60040000
-    // CTRL1: enable ADC1, set clock divider
-    // APB_SARADC_CTRL1 at +0x04
-    *(volatile unsigned int *)0x60040004 = (1 << 22);   // ADC1 work in normal mode
-    *(volatile unsigned int *)0x60040004 |= (1 << 20);   // sar1_sample_cycle 1
-    *(volatile unsigned int *)0x60040008 = (2 << 0);     // sar_clk_div = 2
+    puts("WiFi init...\n");
     
-    // Wait for ADC to stabilize
-    for (volatile int i = 0; i < 1000; i++) {}
-}
-
-// Read ADC1 channel 0 (GPIO2 on XIAO C3)
-static unsigned int adc_read(void) {
-    // CTRL2 register at +0x08: start SAR1
-    volatile unsigned int *ctrl2 = (volatile unsigned int *)0x60040008;
-    volatile unsigned int *data = (volatile unsigned int *)0x6004000C;
-    volatile unsigned int *status = (volatile unsigned int *)0x6004001C;
+    // Clock enable — protected by safe_write
+    if (safe_write(0x600260D0, 0) < 0) {  // DPORT_WIFI_CLK_EN
+        puts("Blocked: DPORT write\n");
+        return -1;
+    }
     
-    // Start ADC1 conversion on channel 0
-    *ctrl2 = (0 << 21) |     // SAR1 sample cycle
-             (1 << 19) |     // SAR1 start
-             (0 << 16);      // SAR1 channel 0
+    // If we get here, the write went through — but it might brick USB
+    // The probe_usb() already confirmed USB was alive BEFORE
     
-    // Wait for done
-    for (volatile int i = 0; i < 100; i++) {}
-    
-    // Read result
-    unsigned int val = *data & 0xFFF;  // 12-bit ADC
-    return val;
+    return 0;
 }
 
 void main(void) {
-    *(volatile unsigned int *)0x60004024 = (1 << 2);  // GPIO2 output for blink
+    *(volatile unsigned int *)0x60004024 = (1 << 2);
     
-    // Init ADC
-    adc_init();
+    // Read GPIO0 to determine boot mode (safe vs normal)
+    unsigned int gpio0 = (*(volatile unsigned int *)0x6000403C >> 0) & 1;
     
-    puts("99x adc\n");
+    puts("99x ");
+    if (gpio0 == 0) {
+        puts("SAFE\n");
+    } else {
+        puts("NORMAL\n");
+    }
+    
+    // In safe mode, never touch risky peripherals
+    if (gpio0 == 0) {
+        while (1) {
+            feed();
+            // Blink — safe mode only
+            *(volatile unsigned int *)0x60004004 = (1 << 2);
+            for (volatile int i = 0; i < 200000; i++) {}
+            *(volatile unsigned int *)0x60004008 = (1 << 2);
+            for (volatile int i = 0; i < 200000; i++) {}
+        }
+    }
+    
+    // Normal mode — try risky init
+    // First confirm USB is alive
+    if (probe_usb()) {
+        puts("USB OK, proceeding\n");
+    } else {
+        puts("USB dead, safe mode\n");
+        while (1) { feed(); }
+    }
+    
+    // Try WiFi init (protected by safe_write)
+    try_init_wifi();
+    
+    puts("Running\n");
     
     while (1) {
         feed();
-        
-        // Read ADC on GPIO2 (channel 0)
-        unsigned int adc_val = adc_read();
-        
-        // Read GPIO state
-        unsigned int gpio_val = *(volatile unsigned int *)0x6000403C;
-        
-        // Print: "ADC=XXXX GPIO=XXXXXX"
-        putchar('A'); putchar('=');
-        putdec(adc_val);
-        putchar(' ');
-        putchar('G'); putchar('=');
-        puthex(gpio_val);
+        unsigned int gv = *(volatile unsigned int *)0x6000403C;
+        puthex(gv);
         putchar('\n');
-        
-        // Blink
         *(volatile unsigned int *)0x60004004 = (1 << 2);
         for (volatile int i = 0; i < 50000; i++) {}
         *(volatile unsigned int *)0x60004008 = (1 << 2);
